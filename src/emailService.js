@@ -106,9 +106,9 @@ export async function markEmailAsRead(email_account_id, mailbox, uid) {
   const client = createImapClient(account);
 
   await client.connect();
-  await client.mailboxOpen(mailbox);
+  await client.mailboxOpen(mailbox, { readOnly: false });
 
-  await client.messageFlagsAdd(uid, ["\\Seen"]);
+  await client.messageFlagsAdd({ uid }, ["\\Seen"], { uid: true });
 
   await client.logout();
 
