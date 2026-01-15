@@ -17,6 +17,7 @@ router.get("/", async (req, res) => {
       email_account_id,
       page = 1,
       limit = 20,
+      search = "",
     } = req.query;
 
     if (!email_account_id) {
@@ -29,7 +30,8 @@ router.get("/", async (req, res) => {
     const result = await fetchEmailsForAccount(
       email_account_id,
       Number(page),
-      Number(limit)
+      Number(limit),
+      search
     );
 
     res.json({

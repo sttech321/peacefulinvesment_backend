@@ -34,7 +34,7 @@ function createImapClient(account) {
   });
 }
 
-export async function fetchEmailsForAccount(email_account_id, page, limit) {
+export async function fetchEmailsForAccount(email_account_id, page, limit, search = "") {
   const account = await getEmailAccount(email_account_id);
   const client = createImapClient(account);
 
@@ -43,10 +43,25 @@ export async function fetchEmailsForAccount(email_account_id, page, limit) {
   await client.connect();
   await client.mailboxOpen("INBOX");
 
-  // 1️⃣ Get all message UIDs
-  const uids = await client.search({ all: true });
+  let searchCriteria;
 
-  // 2️⃣ Sort newest → oldest
+  if (search && search.trim()) {
+    //if (account.provider === "gmail") {
+
+    //}
+    searchCriteria = {
+      text: search,
+    };
+  } else {
+    searchCriteria = { all: true };
+  }
+
+  const uidResult = await client.search(searchCriteria);
+
+  // ✅ normalize to array
+  const uids = Array.from(uidResult);
+
+  // sort newest → oldest
   uids.sort((a, b) => b - a);
 
   // 3️⃣ Pagination math
