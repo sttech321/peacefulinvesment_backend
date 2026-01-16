@@ -3,7 +3,8 @@ import {
   fetchEmailsForAccount,
   markEmailAsRead,
   replyToEmail,
-  deleteEmail
+  deleteEmail,
+  sendNewEmail        
 } from "./emailService.js";
 
 const router = express.Router();
@@ -100,6 +101,50 @@ router.post("/delete", async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Failed to delete email",
+    });
+  }
+});
+
+/**
+ * POST /api/emails/send
+ * Send a new email (compose)
+ */
+router.post("/send", async (req, res) => {
+  try {
+    const {
+      email_account_id,
+      to_email,
+      subject,
+      body,
+    } = req.body;
+
+    // 🔒 Validation
+    if (!email_account_id || !to_email || !body) {
+      return res.status(400).json({
+        success: false,
+        message: "email_account_id, to_email and body are required",
+      });
+    }
+
+    const result = await sendNewEmail({
+      email_account_id,
+      to: to_email,
+      subject: subject || "",
+      body,
+    });
+
+    res.json({
+      success: true,
+      message: "Email sent successfully",
+      messageId: result.messageId,
+    });
+
+  } catch (error) {
+    console.error("Send email error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to send email",
     });
   }
 });

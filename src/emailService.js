@@ -249,3 +249,31 @@ export async function deleteEmail({
 
   return { success: true };
 }
+
+export async function sendNewEmail({
+  email_account_id,
+  to,
+  subject,
+  body,
+  inReplyTo,
+  references,
+}) {
+  const account = await getEmailAccount(email_account_id);
+  const transporter = createSmtpClient(account);
+
+  const info = await transporter.sendMail({
+    from: account.email,
+    to,
+    subject,
+    text: body,
+    headers: {
+      ...(inReplyTo ? { "In-Reply-To": inReplyTo } : {}),
+      ...(references ? { References: references } : {}),
+    },
+  });
+
+  return {
+    success: true,
+    messageId: info.messageId,
+  };
+}
