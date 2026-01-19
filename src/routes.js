@@ -170,7 +170,14 @@ router.post("/send", upload.array("attachments"), async (req, res) => {
  */
 router.get("/attachment", async (req, res) => {
   try {
-    const { email_account_id, mailbox = "INBOX", uid, part, filename, mimeType } = req.query;
+    const {
+      email_account_id,
+      mailbox = "INBOX",
+      uid,
+      part,
+      filename,
+      mimeType
+    } = req.query;
 
     if (!email_account_id || !uid || !part) {
       return res.status(400).json({ message: "Missing parameters" });
@@ -183,7 +190,12 @@ router.get("/attachment", async (req, res) => {
       part
     );
 
-    const contentType = mimeType || "application/octet-stream";
+    // ✅ sanitize mime type
+    let contentType = "application/octet-stream";
+    if (typeof mimeType === "string" && mimeType.includes("/")) {
+      contentType = mimeType.split(";")[0].trim();
+    }
+
     const isPdf = contentType === "application/pdf";
 
     res.setHeader("Content-Type", contentType);
@@ -192,20 +204,15 @@ router.get("/attachment", async (req, res) => {
       `${isPdf ? "inline" : "attachment"}; filename="${filename || "file"}"`
     );
     res.setHeader("Cache-Control", "no-store");
-    res.setHeader("Content-Transfer-Encoding", "binary");
-    res.setHeader("Accept-Ranges", "bytes");
-    res.removeHeader("Content-Length");
-    res.removeHeader("Transfer-Encoding");
 
-    //res.setHeader("Content-Length", buffer.length);
-    res.status(200);
-    res.end(buffer);
+    res.status(200).end(buffer);
 
   } catch (err) {
     console.error("Attachment error:", err);
     res.status(500).json({ message: err.message });
   }
 });
+
 
 
 export default router;
