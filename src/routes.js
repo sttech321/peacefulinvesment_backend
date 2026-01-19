@@ -194,9 +194,11 @@ router.get("/attachment", async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("Content-Transfer-Encoding", "binary");
     res.setHeader("Accept-Ranges", "bytes");
+    res.removeHeader("Content-Length");
+    res.removeHeader("Transfer-Encoding");
 
     //res.setHeader("Content-Length", buffer.length);
-
+    res.status(200);
     res.end(buffer);
 
   } catch (err) {
