@@ -4,8 +4,15 @@ import {
   markEmailAsRead,
   replyToEmail,
   deleteEmail,
-  sendNewEmail        
+  sendNewEmail,
+  downloadEmailAttachment,    
 } from "./emailService.js";
+
+import multer from "multer";
+
+const upload = multer({
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+});
 
 const router = express.Router();
 
@@ -109,7 +116,7 @@ router.post("/delete", async (req, res) => {
  * POST /api/emails/send
  * Send a new email (compose)
  */
-router.post("/send", async (req, res) => {
+router.post("/send", upload.array("attachments"), async (req, res) => {
   try {
     const {
       email_account_id,
@@ -117,6 +124,8 @@ router.post("/send", async (req, res) => {
       subject,
       body,
     } = req.body;
+
+    const files = req.files;
 
     // 🔒 Validation
     if (!email_account_id || !to_email || !body) {
@@ -126,11 +135,17 @@ router.post("/send", async (req, res) => {
       });
     }
 
+    const attachments = files?.map(file => ({
+      filename: file.originalname,
+      content: file.buffer,
+    }));
+
     const result = await sendNewEmail({
       email_account_id,
       to: to_email,
       subject: subject || "",
       body,
+      attachments,
     });
 
     res.json({
@@ -148,5 +163,43 @@ router.post("/send", async (req, res) => {
     });
   }
 });
+
+
+/**
+ * GET /api/emails/attachment
+ */
+router.get("/attachment", async (req, res) => {
+  try {
+    const { email_account_id, mailbox = "INBOX", uid, part, filename, mimeType } = req.query;
+
+    if (!email_account_id || !uid || !part) {
+      return res.status(400).json({ message: "Missing parameters" });
+    }
+
+    const buffer = await downloadEmailAttachment(
+      email_account_id,
+      mailbox,
+      Number(uid),
+      part
+    );
+
+    const contentType = mimeType || "application/octet-stream";
+    const isPdf = contentType === "application/pdf";
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader(
+      "Content-Disposition",
+      `${isPdf ? "inline" : "attachment"}; filename="${filename || "file"}"`
+    );
+    res.setHeader("Content-Length", buffer.length);
+
+    res.send(buffer);
+
+  } catch (err) {
+    console.error("Attachment error:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
 export default router;

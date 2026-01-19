@@ -12,6 +12,7 @@
     "express": "^4.19.2",
     "imapflow": "^1.0.176",
     "mailparser": "^3.6.6",
+    "multer": "^2.0.2",
     "nodemailer": "^7.0.12"
   }
 }

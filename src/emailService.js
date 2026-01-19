@@ -74,6 +74,7 @@ export async function fetchEmailsForAccount(email_account_id, page, limit, searc
     uid: true,
     source: true,
     flags: true,
+    bodyStructure: true
   })) {
     const parsed = await simpleParser(msg.source);
 
@@ -84,8 +85,11 @@ export async function fetchEmailsForAccount(email_account_id, page, limit, searc
         ? msg.flags.includes("\\Seen")
         : false;
 
+    const attachments = extractAttachments(msg.bodyStructure);
+
     emails.push({
       uid: msg.uid,
+      //mailbox: "INBOX",
       mailbox: "inbox",
       from: parsed.from?.text || "",
       subject: parsed.subject || "",
@@ -93,6 +97,7 @@ export async function fetchEmailsForAccount(email_account_id, page, limit, searc
       text: parsed.text || "",
       html: parsed.html || "",
       is_read: isRead,
+      attachments,
       replies: [],
     });
   }
@@ -255,8 +260,8 @@ export async function sendNewEmail({
   to,
   subject,
   body,
-  inReplyTo,
-  references,
+  attachments,
+  references
 }) {
   const account = await getEmailAccount(email_account_id);
   const transporter = createSmtpClient(account);
@@ -266,8 +271,9 @@ export async function sendNewEmail({
     to,
     subject,
     text: body,
+    attachments,
     headers: {
-      ...(inReplyTo ? { "In-Reply-To": inReplyTo } : {}),
+      ...(to ? { "In-Reply-To": to } : {}),
       ...(references ? { References: references } : {}),
     },
   });
@@ -276,4 +282,70 @@ export async function sendNewEmail({
     success: true,
     messageId: info.messageId,
   };
+}
+
+export function extractAttachments(structure, list = []) {
+  if (!structure) return list;
+
+  const isAttachment =
+    structure.disposition === "attachment" ||
+    structure.disposition === "inline";
+
+  const filename =
+    structure.dispositionParameters?.filename ||
+    structure.params?.name;
+
+  // ✅ ONLY leaf nodes are fetchable
+  const isLeaf = !structure.childNodes || structure.childNodes.length === 0;
+
+  if (isAttachment && filename && isLeaf && structure.part) {
+    list.push({
+      part: structure.part, // SAFE IMAP BODY PART
+      filename,
+      mimeType: `${structure.type}/${structure.subtype}`,
+      size: structure.size,
+    });
+  }
+
+  if (structure.childNodes) {
+    for (const child of structure.childNodes) {
+      extractAttachments(child, list);
+    }
+  }
+
+  return list;
+}
+
+export async function downloadEmailAttachment(
+  email_account_id,
+  mailbox,
+  uid,
+  part
+) {
+  const account = await getEmailAccount(email_account_id);
+  const client = createImapClient(account);
+
+  await client.connect();
+  await client.mailboxOpen(mailbox, { readOnly: true });
+
+  // ✅ Correct ImapFlow API
+  const { content } = await client.download(
+    Number(uid),
+    part,
+    { uid: true }
+  );
+
+  if (!content) {
+    await client.logout();
+    throw new Error("Attachment not found");
+  }
+
+  const chunks = [];
+  for await (const chunk of content) {
+    chunks.push(chunk);
+  }
+
+  await client.logout();
+
+  return Buffer.concat(chunks);
 }
