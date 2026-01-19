@@ -191,9 +191,13 @@ router.get("/attachment", async (req, res) => {
       "Content-Disposition",
       `${isPdf ? "inline" : "attachment"}; filename="${filename || "file"}"`
     );
-    res.setHeader("Content-Length", buffer.length);
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Content-Transfer-Encoding", "binary");
+    res.setHeader("Accept-Ranges", "bytes");
 
-    res.send(buffer);
+    //res.setHeader("Content-Length", buffer.length);
+
+    res.end(buffer);
 
   } catch (err) {
     console.error("Attachment error:", err);
