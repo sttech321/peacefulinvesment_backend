@@ -175,8 +175,7 @@ router.get("/attachment", async (req, res) => {
       mailbox = "INBOX",
       uid,
       part,
-      filename,
-      mimeType
+      filename
     } = req.query;
 
     if (!email_account_id || !uid || !part) {
@@ -190,10 +189,11 @@ router.get("/attachment", async (req, res) => {
       part
     );
 
-    // ✅ sanitize mime type
+    // ✅ MIME type decided by server, not client
     let contentType = "application/octet-stream";
-    if (typeof mimeType === "string" && mimeType.includes("/")) {
-      contentType = mimeType.split(";")[0].trim();
+
+    if (filename?.toLowerCase().endsWith(".pdf")) {
+      contentType = "application/pdf";
     }
 
     const isPdf = contentType === "application/pdf";
@@ -212,6 +212,7 @@ router.get("/attachment", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
 
 
 
