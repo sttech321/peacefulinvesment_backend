@@ -3,16 +3,19 @@
   "type": "module",
   "version": "1.0.0",
   "scripts": {
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "cron:prayer": "node src/prayerNotificationJob.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.90.1",
     "cors": "^2.8.5",
+    "dayjs": "^1.11.19",
     "dotenv": "^16.3.1",
     "express": "^4.19.2",
     "imapflow": "^1.0.176",
     "mailparser": "^3.6.6",
     "multer": "^2.0.2",
-    "nodemailer": "^7.0.12"
+    "nodemailer": "^7.0.12",
+    "twilio": "^5.12.0"
   }
 }
